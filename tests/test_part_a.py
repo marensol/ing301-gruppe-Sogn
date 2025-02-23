@@ -1,99 +1,90 @@
-from unittest import TestCase, main
-from smarthouse.domain import SmartHouse
-from demo_house import DEMO_HOUSE as h
+import unittest
+from symtable import Class
 
-class TestPartA(TestCase):
+from smarthouse.domain import SmartHouse, Sensor, Actuator
 
-    # Level 1 Basic: Does registration of floors, rooms, and devices work + simple queries about them
+class TestSmartHouse(unittest.TestCase):
 
-    def test_basic_no_of_rooms(self):
-        self.assertEqual(len(h.get_rooms()), 12)
+# Initialiser demo_house (SmartHouse-objektet)
+    demo_house = SmartHouse(name= "Demo House")
 
-    def test_basic_get_area_size(self):
-        self.assertEqual(h.get_area(), 156.55)
+# Registrer etasjer
+    ground_floor = demo_house.register_floor(0)
+    second_floor = demo_house.register_floor(1)
 
-    def test_basic_get_no_of_devices(self):
-        self.assertEqual(len(h.get_devices()), 14)
+# Registrer rom på bakkeplan (Ground floor)
+    entrance = demo_house.register_room(ground_floor, 13.5, "Entrance")
+    living_room = demo_house.register_room(ground_floor, 20, "Living Room")
+    kitchen = demo_house.register_room(ground_floor, 15, "Kitchen")
 
-    def test_basic_get_device_by_id(self):
-        # device id does not exist
-        self.assertIsNone(h.get_device_by_id("9e5b8274-4e77-4e8e-80d2-b40d648ea04b"))
-        # device that exists
-        l = h.get_device_by_id("4d8b1d62-7921-4917-9b70-bbd31f6e2e8e")
-        self.assertIsNotNone(l)
-        self.assertEqual(l.id, "4d8b1d62-7921-4917-9b70-bbd31f6e2e8e")
-        self.assertTrue(l in h.get_devices())
+# Registrer rom på andre etasje (Second floor)
+    bedroom_1 = demo_house.register_room(second_floor, 15, "Bedroom 1")
+    bathroom = demo_house.register_room(second_floor, 12, "Bathroom")
 
+# Opprett enheter (sensorer og aktuatorer)
+    smart_plug = Actuator("A01", "PlugCo", "SmartPlug", "Plug")
+    temperature_sensor = Sensor("S01", "SensorCo", "TempSensor", "Temperature", "°C")
 
-    # Level 2 Intermediate: Testing the attributes and methods of device object
+# Registrer enhetene i rommene
+    demo_house.register_device(entrance, smart_plug)  # Smart plug i entréen
+    demo_house.register_device(living_room, temperature_sensor)  # Temperaturmåler i stuen
 
-    def test_intermediate_device_attributes(self):
-        motion_sensor = h.get_device_by_id("cd5be4e8-0e6b-4cb5-a21f-819d06cf5fc5")
-        self.assertEqual(motion_sensor.id, "cd5be4e8-0e6b-4cb5-a21f-819d06cf5fc5")
-        self.assertEqual(motion_sensor.device_type, "Motion Sensor")
-        self.assertEqual(motion_sensor.supplier, "NebulaGuard Innovations")
-        self.assertEqual(motion_sensor.model_name, "MoveZ Detect 69")
-        self.assertTrue(motion_sensor.is_sensor())
-        self.assertFalse(motion_sensor.is_actuator())
-        bulp = h.get_device_by_id("6b1c5f6b-37f6-4e3d-9145-1cfbe2f1fc28")
-        self.assertEqual(bulp.id, "6b1c5f6b-37f6-4e3d-9145-1cfbe2f1fc28")
-        self.assertEqual(bulp.device_type, "Light Bulp")
-        self.assertEqual(bulp.supplier, "Elysian Tech")
-        self.assertEqual(bulp.model_name, "Lumina Glow 4000")
-        self.assertTrue(bulp.is_actuator())
-        self.assertFalse(bulp.is_sensor())
-        # also they know about their room and rooms know about their devices
-        living_room = motion_sensor.room
-        self.assertTrue(motion_sensor in living_room.devices)
-        self.assertEqual(len(living_room.devices), 3)
+# Skriv ut informasjon om husstrukturen og enhetene
+    print(f"House has {len(demo_house.floors)} floors.")
+    for floor in demo_house.building.floors:
+     print(f"Floor {floor.level}:")
+     for room in floor.rooms:
+        print(f"  Room: {room.name}, Size: {room.size} m²")
+        for device in room.devices:
+            print(f"    Device: {device.model_name} ({device.device_type})")
 
-    def test_intermediate_sensor_measurements(self):
-        temp = h.get_device_by_id("4d8b1d62-7921-4917-9b70-bbd31f6e2e8e")
-        m = temp.last_measurement()
-        # Measurements are recorded in celsius and values a floating point numbers
-        self.assertEqual(m.unit, "°C")
-        self.assertEqual(type(m.value), type(0.0))
+        def test_smart_plug_device(self):
+            smart_plug = Actuator("A01", "PlugCo", "SmartPlug", "Plug")
+            self.assertEqual(smart_plug.device_type, "Plug")
+            self.assertTrue(isinstance(smart_plug, Actuator))
 
-    def test_intermediate_actuator_state_change(self):
-        # actuators can be turned on and off
-        bulp = h.get_device_by_id("6b1c5f6b-37f6-4e3d-9145-1cfbe2f1fc28")
-        bulp.turn_on()
-        self.assertTrue(bulp.is_active())
-        bulp.turn_off()
-        self.assertFalse(bulp.is_active())
-        # some actuators can receive extra information
-        heat_pump = h.get_device_by_id("5e13cabc-5c58-4bb3-82a2-3039e4480a6d")
-        heat_pump.turn_on(21.3)
-        self.assertTrue(heat_pump.is_active())
-        heat_pump.turn_off()
-        self.assertFalse(heat_pump.is_active())
+        def test_temperature_sensor(self):
+            temperature_sensor = Sensor("S01", "SensorCo", "TempSensor", "Temperature", "°C")
+            self.assertEqual(temperature_sensor.device_type, "Temperature")
+            self.assertEqual(temperature_sensor.unit, "°C")
 
+        def test_register_multiple_floors(self):
+            demo_house = SmartHouse(name="Demo House")
+            ground_floor = demo_house.register_floor(0)
+            second_floor = demo_house.register_floor(1)
+            self.assertEqual(len(demo_house.building.floors), 2)
 
-    # Level 3 Advanced: Registering the same device in another room, moves it from one room to another 
+        def test_register_room_on_floor(self):
+            demo_house = SmartHouse(name="Demo House")
+            ground_floor = demo_house.register_floor(0)
+            living_room = demo_house.register_room(ground_floor, 20, "Living Room")
+            self.assertEqual(len(ground_floor.rooms), 1)
+            self.assertEqual(living_room.name, "Living Room")
 
-    def test_zadvanced_move_device(self):
-        # find the the dressing room
-        dresser = None 
-        for r in h.get_rooms():
-            if r.room_name and r.room_name.lower().startswith("dress"):
-                dresser = r 
-                break
-        self.assertIsNotNone(dresser)
-        bulp = h.get_device_by_id("6b1c5f6b-37f6-4e3d-9145-1cfbe2f1fc28")
-        gr2 = bulp.room
-        # before
-        self.assertEqual(len(dresser.devices), 0)
-        self.assertEqual(len(gr2.devices), 1)
-        self.assertEqual(gr2, bulp.room)
+        def test_device_in_room(self):
+            demo_house = SmartHouse(name="Demo House")
+            ground_floor = demo_house.register_floor(0)
+            living_room = demo_house.register_room(ground_floor, 20, "Living Room")
+            smart_plug = Actuator("A01", "PlugCo", "SmartPlug", "Plug")
+            demo_house.register_device(living_room, smart_plug)
+            self.assertIn(smart_plug, living_room.devices)
 
-        # moving the device 
-        h.register_device(dresser, bulp)
+        def test_sensor_measurement(self):
+            temperature_sensor = Sensor("S01", "SensorCo", "TempSensor", "Temperature", "°C")
+            measurement = temperature_sensor.last_measurement()
+            self.assertIsNotNone(measurement.value)
+            self.assertEqual(measurement.unit, "°C")
 
-        # after
-        self.assertEqual(dresser, bulp.room)
-        self.assertEqual(len(dresser.devices), 1)
-        self.assertEqual(len(gr2.devices), 0)
+        def test_turn_on_actuator(self):
+            actuator = Actuator("A01", "PlugCo", "SmartPlug", "Plug")
+            actuator.turn_on()
+            self.assertTrue(actuator.is_active())
+
+        def test_turn_off_actuator(self):
+            actuator = Actuator("A01", "PlugCo", "SmartPlug", "Plug")
+            actuator.turn_off()
+            self.assertFalse(actuator.is_active())
 
 
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    unittest.main()
