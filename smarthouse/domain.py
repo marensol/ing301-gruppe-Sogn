@@ -43,10 +43,12 @@ class Floor:
         self.rooms.append(room)
 
 class Room:
-    def __init__(self, size, name):
-        self.size = size
-        self.name = name
-        self.devices = []
+    def __init__(self, room_id, floor, area, room_name):
+        self.room_id = room_id  # Legg til room_id
+        self.floor = floor  # Legg til floor
+        self.area = area  # Legg til area
+        self.room_name = room_name  # Legg til room_name
+        self.devices = []  # Fortsatt en liste for devices
 
     def add_device(self, device):
         self.devices.append(device)
