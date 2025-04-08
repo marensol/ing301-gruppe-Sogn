@@ -1,77 +1,91 @@
 import sqlite3
-from pathlib import Path
-
+from typing import Optional
+from smarthouse.domain import Measurement
 
 class SmartHouseRepository:
-    def __init__(self, db_path):
-        # Sørger for at db_path er en gyldig filbane
-        if isinstance(db_path, Path):
-            db_path = str(db_path)
+    """
+    Provides the functionality to persist and load a _SmartHouse_ object 
+    in a SQLite database.
+    """
 
-        # Åpner en SQLite-tilkobling
-        self.db = sqlite3.connect(db_path)
-        self.db.row_factory = sqlite3.Row  # Henter kolonner som nøkkel-verdi
+    def __init__(self, file: str) -> None:
+        self.file = file 
+        self.conn = sqlite3.connect(file, check_same_thread=False)
 
+    def __del__(self):
+        self.conn.close()
+
+    def cursor(self) -> sqlite3.Cursor:
+        """
+        Provides a _raw_ SQLite cursor to interact with the database.
+        When calling this method to obtain a cursors, you have to 
+        rememeber calling `commit/rollback` and `close` yourself when
+        you are done with issuing SQL commands.
+        """
+        return self.conn.cursor()
+
+    def reconnect(self):
+        self.conn.close()
+        self.conn = sqlite3.connect(self.file)
+
+    
     def load_smarthouse_deep(self):
-        # Henter alle rom
-        rooms_data = self.db.execute("SELECT id, floor, area, name FROM rooms").fetchall()
+        """
+        This method retrives the complete single instance of the _SmartHouse_ 
+        object stored in this database. The retrieval yields a _deep_ copy, i.e.
+        all referenced objects within the object structure (e.g. floors, rooms, devices) 
+        are retrieved as well. 
+        """
+        # TODO: START here! remove the following stub implementation and implement this function 
+        #       by retrieving the data from the database via SQL `SELECT` statements.
+        return NotImplemented
 
-        rooms = []
-        for room_data in rooms_data:
-            # Henter enheter for hvert rom
-            devices = self.load_devices(room_data['id'])
 
-            room = {
-                'id': room_data['id'],
-                'floor': room_data['floor'],
-                'area': room_data['area'],
-                'name': room_data['name'],
-                'devices': devices  # Enheter knyttet til rommet
-            }
-            rooms.append(room)
+    def get_latest_reading(self, sensor) -> Optional[Measurement]:
+        """
+        Retrieves the most recent sensor reading for the given sensor if available.
+        Returns None if the given object has no sensor readings.
+        """
+        # TODO: After loading the smarthouse, continue here
+        return NotImplemented
 
-        return rooms
 
-    def load_devices(self, room_id):
-        # Henter enheter knyttet til et rom
-        devices_data = self.db.execute("""
-            SELECT id, name, type, room_id 
-            FROM devices WHERE room_id = ?
-        """, (room_id,)).fetchall()
+    def update_actuator_state(self, actuator):
+        """
+        Saves the state of the given actuator in the database. 
+        """
+        # TODO: Implement this method. You will probably need to extend the existing database structure: e.g.
+        #       by creating a new table (`CREATE`), adding some data to it (`INSERT`) first, and then issue
+        #       and SQL `UPDATE` statement. Remember also that you will have to call `commit()` on the `Connection`
+        #       stored in the `self.conn` instance variable.
+        pass
 
-        devices = []
-        for device_data in devices_data:
-            # Henter målinger for hver enhet
-            measurements = self.load_measurements(device_data['id'])
 
-            device = {
-                'id': device_data['id'],
-                'name': device_data['name'],
-                'type': device_data['type'],
-                'measurements': measurements  # Målinger knyttet til enheten
-            }
-            devices.append(device)
+    # statistics
 
-        return devices
+    
+    def calc_avg_temperatures_in_room(self, room, from_date: Optional[str] = None, until_date: Optional[str] = None) -> dict:
+        """Calculates the average temperatures in the given room for the given time range by
+        fetching all available temperature sensor data (either from a dedicated temperature sensor 
+        or from an actuator, which includes a temperature sensor like a heat pump) from the devices 
+        located in that room, filtering the measurement by given time range.
+        The latter is provided by two strings, each containing a date in the ISO 8601 format.
+        If one argument is empty, it means that the upper and/or lower bound of the time range are unbounded.
+        The result should be a dictionary where the keys are strings representing dates (iso format) and 
+        the values are floating point numbers containing the average temperature that day.
+        """
+        # TODO: This and the following statistic method are a bit more challenging. Try to design the respective 
+        #       SQL statements first in a SQL editor like Dbeaver and then copy it over here.  
+        return NotImplemented
 
-    def load_measurements(self, device_id):
-        # Henter målinger knyttet til en enhet
-        measurements_data = self.db.execute("""
-            SELECT timestamp, value, unit 
-            FROM measurements WHERE device_id = ?
-        """, (device_id,)).fetchall()
+    
+    def calc_hours_with_humidity_above(self, room, date: str) -> list:
+        """
+        This function determines during which hours of the given day
+        there were more than three measurements in that hour having a humidity measurement that is above
+        the average recorded humidity in that room at that particular time.
+        The result is a (possibly empty) list of number representing hours [0-23].
+        """
+        # TODO: implement
+        return NotImplemented
 
-        measurements = []
-        for measurement_data in measurements_data:
-            measurement = {
-                'timestamp': measurement_data['timestamp'],
-                'value': measurement_data['value'],
-                'unit': measurement_data['unit']
-            }
-            measurements.append(measurement)
-
-        return measurements
-
-    def close(self):
-        # Lukker forbindelsen til databasen
-        self.db.close()
